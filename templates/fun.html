@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>楽しいおすすめ曲</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        #home-button {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #007bff;
+            padding: 10px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        #home-button a {
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+        }
+        #home-button a:hover {
+            text-decoration: underline;
+        }
+        .content {
+            padding-top: 60px;
+            margin: 0 auto;
+            max-width: 800px;
+        }
+        h1, h2, h3 {
+            text-align: center;
+        }
+        .emotion-buttons {
+            display: flex;
+            justify-content: space-around; /* ボタンを横並びに配置 */
+            margin: 20px 0;
+        }
+        .emotion-buttons button {
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .emotion-buttons button:hover {
+            background-color: #0056b3;
+            transform: scale(1.05); /* ホバー時の拡大効果 */
+        }
+        .recommended-tracks {
+            margin-top: 20px;
+        }
+        .track-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .track-card .track-title {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        .emotion-bar-container {
+            margin-top: 10px;
+        }
+        .emotion-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative; /* バー内の要素を相対配置 */
+            margin: 10px 0;
+        }
+        .emotion-level {
+            height: 100%;
+            position: absolute;
+        }
+        .emotion-scores {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .refresh-button {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .refresh-button button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .refresh-button button:hover {
+            background-color: #0056b3;
+        }
+        @media (max-width: 600px) {
+            .emotion-buttons {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .track-card {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <script>
+        function drawEmotionBars(emotionBar, scores) {
+            emotionBar.innerHTML = ''; // 既存のバーをクリア
+            let totalWidth = 0;
+
+            for (const [emotion, score] of Object.entries(scores)) {
+                const bar = document.createElement('div');
+                bar.className = 'emotion-level';
+                bar.style.width = `${Math.min(score * 100, 100 - totalWidth)}%`; // 幅を制限
+                bar.style.left = `${totalWidth}%`; // 左端から始めない
+                bar.style.backgroundColor = getEmotionColor(emotion);
+
+                totalWidth += score * 100;
+                if (totalWidth >= 100) break; // 100%を超えないようにする
+                emotionBar.appendChild(bar);
+            }
+        }
+
+
+
+function getEmotionColor(emotion) {
+    const colors = {
+        "喜び": "#FFD700", // ゴールド
+        "悲しみ": "#00BFFF", // 青
+        "期待": "#32CD32", // 黄緑
+        "驚き": "#FF6347", // トマト色
+        "怒り": "#FF4500", // 濃いオレンジ
+        "恐れ": "#A9A9A9", // グレー
+        "嫌悪": "#8B0000", // 濃い赤
+        "信頼": "#8A2BE2"  // 紫
+    };
+    return colors[emotion] || "#000000"; // 不明な感情は黒
+}
+
+    </script>
+
+    <div id="home-button">
+        <a href="/">ホームに戻る</a>
+    </div>
+
+    <div class="content">
+
+        <div class="recommended-tracks">
+            
+            <!-- おすすめの曲の表示 -->
+            <!-- おすすめの曲の表示 -->
+            <h3>たのしいおすすめの曲:</h3>
+            <div class="refresh-button">
+                <button onclick="location.reload()">おすすめを更新</button>
+            </div>
+            {% for song in recommendations %}
+<div class="track-card">
+    <div class="track-title">{{ song.formatted }}</div>
+    <canvas id="chart-{{ loop.index }}" width="400" height="200"></canvas>
+    <script>
+        const ctx{{ loop.index }} = document.getElementById('chart-{{ loop.index }}').getContext('2d');
+        const chart{{ loop.index }} = new Chart(ctx{{ loop.index }}, {
+            type: 'bar',
+            data: {
+                labels: [{% for emotion in song.scores.keys() %}"{{ emotion }}",{% endfor %}], // X軸のラベル
+                datasets: [{
+                    label: '感情スコア (%)', // 非表示にしても設定が必要
+                    data: [{% for score in song.scores.values() %}{{ (score * 100) | round(1) }},{% endfor %}], // Y軸のデータ
+                    backgroundColor: [
+                        {% for emotion in song.scores.keys() %}
+                        "{{ emotion_colors[emotion] }}", // 色
+                        {% endfor %}
+                    ]
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        display: false // 上部のラベルを非表示に設定
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true // Y軸を0から開始
+                    }
+                }
+            }
+        });
+    </script>
+</div>
+{% endfor %}
+
+
+
+
+                 
+
+</body>
+</html>

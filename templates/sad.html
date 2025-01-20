@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>悲しい のためのおすすめ曲</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        #home-button {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #f8f9fa;
+            padding: 10px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+        #home-button a {
+            text-decoration: none;
+            font-size: 18px;
+            color: #007bff;
+        }
+        #home-button a:hover {
+            text-decoration: underline;
+        }
+        .content {
+            padding-top: 70px;
+            margin: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background: #fff;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .refresh-button {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .refresh-button button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .refresh-button button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div id="home-button">
+        <a href="/">ホームに戻る</a>
+    </div>
+    <div class="content">
+        <h1>悲しいおすすめ曲</h1>
+        <div class="refresh-button">
+            <button onclick="location.reload()">おすすめを更新</button>
+        </div>
+        <ul>
+            {% for song in recommendations %}
+                <li>
+                    <strong>{{ song.formatted }}</strong>
+                    <br>
+                    <canvas id="chart-{{ loop.index }}" width="400" height="200"></canvas>
+                    <script>
+                        const ctx{{ loop.index }} = document.getElementById('chart-{{ loop.index }}').getContext('2d');
+                        const chart{{ loop.index }} = new Chart(ctx{{ loop.index }}, {
+                            type: 'bar',
+                            data: {
+                                labels: [{% for emotion in song.scores.keys() %}"{{ emotion }}",{% endfor %}],
+                                datasets: [{
+                                    label: '感情スコア (%)',
+                                    data: [{% for score in song.scores.values() %}{{ (score * 100) | round(1) }},{% endfor %}],
+                                    backgroundColor: [
+                                        {% for emotion in song.scores.keys() %}"{{ emotion_colors[emotion] }}",{% endfor %}
+                                    ]
+                                }]
+                            },
+                            options: {
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+                    </script>
+                </li>
+            {% endfor %}
+        </ul>
+        
+        
+    </div>
+</body>
+</html>

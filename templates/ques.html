@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>アンケート</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #444;
+        }
+        .form-section {
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #song-suggestions {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            max-height: 150px;
+            overflow-y: auto;
+            background-color: white;
+            margin-top: 5px;
+        }
+        .suggestion-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        .suggestion-item:hover {
+            background-color: #f0f0f0;
+        }
+        .selected-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .selected-item .emotion-bar {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        .emotion-bar div {
+            height: 10px;
+            border-radius: 5px;
+            position: relative;
+        }
+        .emotion-bar div::after {
+            content: attr(data-label);
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #333;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .remove-button {
+            background-color: red;
+        }
+        .remove-button:hover {
+            background-color: darkred;
+        }
+        form button[type="submit"] {
+            display: block;
+            width: 100%;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>好きな曲を選んでください</h1>
+
+<div class="form-section">
+    <label for="song-input">曲名:</label>
+    <input type="text" id="song-input" name="song" placeholder="曲名を入力してください" onkeyup="searchSong()">
+    <div id="song-suggestions"></div>
+</div>
+
+<form action="/ques" method="POST">
+    <h2>選択した曲:</h2>
+    <div id="selected-songs"></div>
+    <input type="hidden" id="selected-songs-input" name="songs">
+    <button type="submit">送信</button>
+</form>
+
+<script>
+    let selectedSongs = [];
+
+    // 曲名の検索
+    function searchSong() {
+        const query = document.getElementById('song-input').value.trim();
+        if (query.length < 1) return;
+
+        fetch(`/search_song?query=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                const suggestions = document.getElementById('song-suggestions');
+                suggestions.innerHTML = '';
+                data.forEach(track => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item';
+                    div.textContent = `${track.name} - ${track.artist}`;
+                    div.onclick = function () {
+                        if (selectedSongs.some(s => s.song === track.name && s.artist === track.artist)) {
+                            alert("この曲はすでに選択されています。");
+                            return;
+                        }
+                        if (selectedSongs.length >= 10) {
+                            alert("曲は最大10曲まで選択できます。");
+                            return;
+                        }
+                        selectedSongs.push({ song: track.name, artist: track.artist });
+                        updateSelectedSongs();
+                    };
+                    suggestions.appendChild(div);
+                });
+            });
+    }
+
+    // 選択した曲の表示更新
+    // 選択した曲の表示を更新
+    function updateSelectedSongs() {
+    const selectedSongsDiv = document.getElementById('selected-songs');
+    selectedSongsDiv.innerHTML = ''; // 表示をクリア
+
+    selectedSongs.forEach((item, index) => {
+        const songDiv = document.createElement('div');
+        songDiv.className = 'selected-item';
+        songDiv.innerHTML = `
+            <div>
+                <strong>${item.song} - ${item.artist}</strong>
+                <div class="emotion-bar" id="emotion-bar-${index}"></div>
+            </div>
+            <button class="remove-button" onclick="removeSong('${item.song}', '${item.artist}')">削除</button>
+        `;
+        selectedSongsDiv.appendChild(songDiv);
+
+        // 感情スコアを取得し表示
+        fetch(`/analyze_emotion?song=${encodeURIComponent(item.song)}&artist=${encodeURIComponent(item.artist)}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTPエラー: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const emotionBar = document.getElementById(`emotion-bar-${index}`);
+                emotionBar.innerHTML = ''; // 表示をクリア
+                for (const [emotion, score] of Object.entries(data)) {
+                    const bar = document.createElement('div');
+                    bar.style.width = `${score * 100}%`;
+                    bar.style.backgroundColor = getEmotionColor(emotion);
+                    bar.setAttribute('data-label', `${emotion}`);
+                    emotionBar.appendChild(bar);
+                }
+            })
+            .catch(error => {
+                console.error('感情スコア取得中のエラー:', error);
+                // エラー時は何も描画せずスキップ
+            });
+    });
+
+    // hidden input に曲のリストを JSON形式でセット
+    document.getElementById('selected-songs-input').value = JSON.stringify(selectedSongs);
+}
+
+
+
+    // 感情の色取得
+    function getEmotionColor(emotion) {
+        const colors = {
+            "喜び": "#FFD700",
+            "悲しみ": "#00BFFF",
+            "期待": "#32CD32",
+            "驚き": "#FF6347",
+            "怒り": "#FF4500",
+            "恐れ": "#A9A9A9",
+            "嫌悪": "#8B0000",
+            "信頼": "#8A2BE2"
+        };
+        return colors[emotion] || "gray";
+    }
+
+    // 曲削除
+    function removeSong(songName, artistName) {
+        selectedSongs = selectedSongs.filter(item => item.song !== songName || item.artist !== artistName);
+        updateSelectedSongs();
+    }
+
+    document.querySelector('form').onsubmit = function (event) {
+        if (selectedSongs.length < 5) {
+            event.preventDefault();
+            alert('最低5曲選択してください');
+        }
+    };
+</script>
+
+</body>
+</html>
