@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "sotuken_model",
+			"path": "."
+		},
+		{
+			"name": "sotukenn_vs",
+			"path": "../../../Documents/sotukenn_vs"
+		}
+	],
+	"settings": {}
+}
